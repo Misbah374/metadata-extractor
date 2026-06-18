@@ -13,6 +13,39 @@ fn gcd_custom(mut a: u64, mut b: u64) -> u64 {
     a
 }
 
+fn has_transparency(img: &image::DynamicImage) -> bool {
+    match img.color() {
+        image::ColorType::L8
+        | image::ColorType::L16
+        | image::ColorType::Rgb8
+        | image::ColorType::Rgb16
+        | image::ColorType::Rgb32F => {
+            return false;
+        }
+
+        image::ColorType::La8
+        | image::ColorType::La16
+        | image::ColorType::Rgba8
+        | image::ColorType::Rgba16
+        | image::ColorType::Rgba32F => {
+            let rgba = img.to_rgba8();
+
+            for y in 0..rgba.height() {
+                for x in 0..rgba.width() {
+                    let pixel = rgba.get_pixel(x, y);
+
+                    if pixel[3] < 255 {
+                        return true;
+                    }
+                }
+            }
+
+            false
+        }
+        _ => todo!()
+    }
+}
+
 fn print_exif_metadata(path: &Path) {
     let file = std::fs::File::open(path).expect("Failed to open file");
     let mut bufreader = BufReader::new(file);     // ownership will be moved
@@ -60,7 +93,12 @@ fn main() {
     let width = img.width();
     let height = img.height();
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("unknown");           // Convert file extension to text; if no extension exists, use "unknown". Borrowed string is used.
+    let color_type = img.color();
+    let transparency = has_transparency(&img);
     println!("Basic Metadata:");
+    println!("Is Symlink: {}", metadata.file_type().is_symlink());
+    println!("Color Type: {:?}", color_type);
+    println!("Transparency: {}", transparency);
     print_basic_metadata(metadata.len(), ext,width, height,);
     println!("\n");
     println!("EXIF Metadata:");
